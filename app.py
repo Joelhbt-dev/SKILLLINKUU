@@ -7,8 +7,7 @@ import base64
 
 
 # --- 1. CONFIGURATION ---
-# CRITICAL FIX 1: Set the static folder to 'frontend'
-# This assumes app.py is running from the root, and 'frontend' is a subdirectory.
+# CRITICAL FIX: Tell Flask the static folder is 'frontend'
 app = Flask(__name__, static_folder='frontend', static_url_path='') 
 
 # Use SQLite for quick setup
@@ -16,8 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///skilllink.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_super_secret_key' 
 
-# CRITICAL FIX 2: Only include the public CORS setting
-# This allows access from your live Render URL.
+# CRITICAL FIX: Only include the public CORS setting (The correct line for deployment)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 db = SQLAlchemy(app)
@@ -51,7 +49,7 @@ class Application(db.Model):
     __table_args__ = (db.UniqueConstraint('job_id', 'applicant_id', name='_job_applicant_uc'),)
 
 
-# --- 3. HELPER FUNCTIONS ---
+# --- 3. HELPER FUNCTIONS (UNCHANGED) ---
 
 def hash_password(password):
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
@@ -74,13 +72,12 @@ def serialize_job(job, current_user_id=None):
     }
 
 def get_auth_user(token):
-    # Uses the password hash as a simple "token"
     try:
         return User.query.filter_by(password_hash=token).first()
     except:
         return None
 
-# --- 4. API ROUTES ---
+# --- 4. API ROUTES (UNCHANGED) ---
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -184,7 +181,7 @@ def employer_jobs():
                 'applicant_name': applicant.username,
                 'applicant_email': applicant.email,
                 'resume_filename': app.resume_filename,
-                'resume_data': app.resume_data # This is the Base64 string for download
+                'resume_data': app.resume_data 
             })
             
         response_data.append({
@@ -225,7 +222,7 @@ def index():
 @app.route('/<path:filename>')
 def serve_static(filename):
     # Serves all other assets (HTML pages, JS, CSS, etc.)
-    # Note: Flask's default static route handles CSS/JS files automatically, but this ensures HTML pages work without a .html extension on some setups.
+    # Flask's send_from_directory is the correct, safe function for this 
     return send_from_directory(app.static_folder, filename)
 
 
