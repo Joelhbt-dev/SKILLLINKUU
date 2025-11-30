@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import hashlib
@@ -6,16 +6,18 @@ import os
 import base64
 
 
-
 # --- 1. CONFIGURATION ---
-app = Flask(__name__)
+# CRITICAL FIX 1: Set the static folder to 'frontend'
+# This assumes app.py is running from the root, and 'frontend' is a subdirectory.
+app = Flask(__name__, static_folder='frontend', static_url_path='') 
+
 # Use SQLite for quick setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///skilllink.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_super_secret_key' 
 
-# Allow frontend running on port 5500 (Live Server) to talk to the backend on 8000
-CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5500"]}})
+# CRITICAL FIX 2: Only include the public CORS setting
+# This allows access from your live Render URL.
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 db = SQLAlchemy(app)
@@ -212,6 +214,19 @@ def user_applications():
         })
         
     return jsonify(response_data)
+
+# --- 5. STATIC FILE ROUTES (THE FIX FOR 404) ---
+
+@app.route('/')
+def index():
+    # Serves the main entry point: index.html
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    # Serves all other assets (HTML pages, JS, CSS, etc.)
+    # Note: Flask's default static route handles CSS/JS files automatically, but this ensures HTML pages work without a .html extension on some setups.
+    return send_from_directory(app.static_folder, filename)
 
 
 if __name__ == '__main__':
